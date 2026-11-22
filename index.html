@@ -705,7 +705,7 @@ function resolveIdx(rawIdx, now, vol) {
 
   // ── Start / Stop ──
   const btnStart=$('btn-start');
-  btnStart.addEventListener('click', async () => {
+  const _onBtnStart = async () => {
     if (!running) {
       await initAudio(); await startCamera();
       running=true; frameLoop();
@@ -719,7 +719,22 @@ function resolveIdx(rawIdx, now, vol) {
       ctx2d.clearRect(0,0,overlay.width,overlay.height);
       $('note-big').textContent='—';
     }
-  });
+  };
+  // ── Démarrage automatique (comme SEB-CLINDOEIL) : plus de bouton START ; « Réessayer » seulement si l'accès échoue
+  const _tryStart = async () => {
+    btnStart.style.display = 'none';
+    try { await _onBtnStart(); }
+    catch (err) {
+      btnStart.textContent = '↻ Réessayer'; btnStart.classList.remove('on'); btnStart.style.display = '';
+      const st = document.getElementById('status'); if (st) st.textContent = 'Erreur : ' + (err && err.message || err);
+    }
+  };
+  btnStart.addEventListener('click', _tryStart);
+  // Le navigateur exige un geste pour le son : on le débloque au premier clic / touche
+  for (const ev of ['pointerdown', 'keydown', 'touchstart']) {
+    window.addEventListener(ev, () => { try { if (typeof audioCtx !== 'undefined' && audioCtx && audioCtx.state === 'suspended') audioCtx.resume(); } catch (e) {} }, { passive: true });
+  }
+  _tryStart();
 
   // ── Choix du son ──
   $('sel-son').addEventListener('change', e => {
